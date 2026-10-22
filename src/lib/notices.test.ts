@@ -12,6 +12,13 @@ describe('generationNotice', () => {
     expect(generationNotice(short30, 29 * 60, library)).toBe('')
     expect(generationNotice(openMic, 700, library)).toBe('')
   })
+  it('treats a small overshoot as on target, since an extra song beats stopping short', () => {
+    expect(generationNotice(short30, 32 * 60, library)).toBe('')
+    expect(generationNotice(short30, 29.5 * 60, library)).toBe('')
+  })
+  it('flags a set that ran well over its slot', () => {
+    expect(generationNotice(short30, 37 * 60, library)).toContain('Regenerate')
+  })
   it('does not blame the library when it has plenty of music but the set missed', () => {
     const text = generationNotice(short30, 20 * 60, library)
     expect(text).toContain('Regenerate')

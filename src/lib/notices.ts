@@ -1,3 +1,4 @@
+import { timeWindow } from './generator'
 import { formatDuration, type Song } from './setlist'
 import type { Template } from './templates'
 
@@ -16,7 +17,8 @@ export function generationNotice(template: Template, totalSec: number, songs: So
   if (library < target) {
     return `Your whole library is only ${formatDuration(library)} of music, so this set cannot reach the ${template.limitValue} minute target. Add more songs to fill it.`
   }
-  if (Math.abs(totalSec - target) > Math.max(120, target * 0.08)) {
+  const { over } = timeWindow(target)
+  if (totalSec < target - Math.max(120, target * 0.08) || totalSec > target + over * 1.5) {
     return `This set came out at ${formatDuration(totalSec)} against a ${template.limitValue} minute target. Try Regenerate for another draw.`
   }
   return ''

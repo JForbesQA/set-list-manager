@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allocate, generateSet, mulberry32, planTempos } from './generator'
+import { allocate, generateSet, mulberry32, planTempos, timeWindow } from './generator'
 import { makeSong } from './testUtils'
 import type { SetList, Song, Tempo } from './setlist'
 import { starterSongsMissingFrom } from '../data/starterLibrary'
@@ -91,20 +91,48 @@ describe('generateSet', () => {
     expect(c.songIds).not.toEqual(a.songIds)
   })
 
-  it('lands close to a time target', () => {
+  it('lands inside the time window for a time target', () => {
+    const target = fullShow.limitValue * 60
+    const { under, over } = timeWindow(target)
     const result = generateSet(fullShow, songs, [], { seed: 3, today: '2026-06-01' })
-    expect(Math.abs(result.totalSec - fullShow.limitValue * 60)).toBeLessThan(150)
+    expect(result.totalSec).toBeGreaterThanOrEqual(target - under)
+    expect(result.totalSec).toBeLessThanOrEqual(target + over)
   })
 
-  it('lands within a minute and a half of 30 and 45 minute targets on a real-sized library', () => {
+  it('never stops short by more than the window, and may run a little over, on a real-sized library', () => {
     const real = starterSongsMissingFrom([])
     for (const id of ['short-set-30', 'short-set']) {
       const t = BUILT_IN_TEMPLATES.find((x) => x.id === id)!
+      const target = t.limitValue * 60
+      const { under, over } = timeWindow(target)
+      let ranOver = 0
       for (let seed = 0; seed < 150; seed++) {
-        const result = generateSet(t, real, [], { seed, today: '2026-10-22' })
-        expect(Math.abs(result.totalSec - t.limitValue * 60)).toBeLessThanOrEqual(90)
+        const { totalSec } = generateSet(t, real, [], { seed, today: '2026-10-22' })
+        expect(totalSec).toBeGreaterThanOrEqual(target - under)
+        expect(totalSec).toBeLessThanOrEqual(target + over)
+        if (totalSec > target) ranOver++
       }
+      // An extra song beats stopping short, so some sets do run slightly over...
+      expect(ranOver).toBeGreaterThan(20)
+      // ...but the buffer is small: 30 minutes accepts at most about 2 minutes over.
+      expect(over).toBeLessThanOrEqual(target * 0.075)
     }
+  })
+
+  it('gives more than one song count for the same time target, so combinations stay varied', () => {
+    const real = starterSongsMissingFrom([])
+    const t = BUILT_IN_TEMPLATES.find((x) => x.id === 'short-set-30')!
+    const counts = new Set<number>()
+    for (let seed = 0; seed < 100; seed++) counts.add(generateSet(t, real, [], { seed, today: '2026-10-22' }).songIds.length)
+    expect(counts.size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('has a tight window below the target and a looser one above it', () => {
+    expect(timeWindow(30 * 60)).toEqual({ under: 45, over: 126 })
+    expect(timeWindow(45 * 60)).toEqual({ under: 68, over: 189 })
+    const big = timeWindow(300 * 60)
+    expect(big.over).toBe(240)
+    expect(big.under).toBeLessThan(big.over)
   })
 
   it('uses every song when the library cannot reach the time target', () => {

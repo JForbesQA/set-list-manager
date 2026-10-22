@@ -13,6 +13,8 @@ A small personal app for building gig set lists from a song library. Data is sto
   medium tempo songs. A tempo plan per template (strict, loose or anything goes) controls how closely a set follows
   the mix. The generator also avoids repeating an artist back to back, favours songs you have not played recently,
   and prefers fewer capo changes
+- Time targets use a small window rather than an exact number: tight below the target, a little looser above it, so a
+  30 minute set lands between about 29:15 and 32:00 and an extra song beats stopping short
 - Readable set list sheet modelled on a printed set list (two numbered columns, artist beneath each title) with
   options for key and capo, tempo, times and notes, a large-text stage mode, and Save as PDF / Save as Word (.docx)
   files (through the share sheet on iPhone, where web apps cannot print), print on desktop, and share or copy as text

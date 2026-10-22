@@ -50,6 +50,25 @@ const CAPO_CHANGE_PENALTY = 0.4
 /** How many different random draws to try when aiming for a time target. */
 const ATTEMPTS = 40
 
+/**
+ * How far a set may stray from a time target before it counts as a miss. Running a little over is
+ * fine (an extra song beats stopping short), so the window is tight below the target and a bit looser
+ * above it, but not so loose that it overshoots a time slot: 30 minutes accepts 29:15 to 32:06, and no
+ * target ever accepts more than 3 minutes short or 4 minutes over.
+ */
+export function timeWindow(targetSec: number): { under: number; over: number } {
+  return {
+    under: Math.round(Math.min(180, Math.max(45, targetSec * 0.025))),
+    over: Math.round(Math.min(240, Math.max(90, targetSec * 0.07))),
+  }
+}
+
+function missBy(totalSec: number, targetSec: number, w: { under: number; over: number }): number {
+  if (totalSec < targetSec - w.under) return targetSec - w.under - totalSec
+  if (totalSec > targetSec + w.over) return totalSec - (targetSec + w.over)
+  return 0
+}
+
 const TIE_ORDER: Tempo[] = ['medium', 'high', 'slow']
 
 /** One random tempo, weighted by the mix, skipping `avoid` unless nothing else has any weight. */
@@ -175,26 +194,32 @@ export function generateSet(
   }
 
   // Time-based: try song counts around the estimate, and several different random draws, and keep
-  // the first set that lands close enough to the target (or the closest one if none does).
+  // the first set that lands inside the time window (or the nearest one if none does).
   const target = template.limitValue * 60
-  const tolerance = Math.max(45, target * 0.02)
+  const window = timeWindow(target)
   const avg = songs.reduce((s, x) => s + x.durationSec, 0) / songs.length
   const estimate = Math.max(1, Math.round(target / avg))
   // A library that cannot reach the target just uses every song it has.
   const from = Math.min(Math.max(1, estimate - 2), songs.length)
   const to = Math.min(songs.length, estimate + 2)
   let best: GeneratedSet | null = null
+  let bestMiss = Infinity
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const attemptSeed = seed + attempt * 7919
     for (let n = from; n <= to; n++) {
       const candidate = build(n, template, songs, setLists, attemptSeed, today)
-      const diff = Math.abs(candidate.totalSec - target)
-      const bestDiff = best === null ? Infinity : Math.abs(best.totalSec - target)
-      if (diff < bestDiff || (diff === bestDiff && candidate.songIds.length < (best?.songIds.length ?? Infinity))) {
+      const miss = missBy(candidate.totalSec, target, window)
+      const closer =
+        miss < bestMiss ||
+        (miss === bestMiss &&
+          best !== null &&
+          Math.abs(candidate.totalSec - target) < Math.abs(best.totalSec - target))
+      if (best === null || closer) {
         best = candidate
+        bestMiss = miss
       }
     }
-    if (best !== null && Math.abs(best.totalSec - target) <= tolerance) break
+    if (bestMiss === 0) break
   }
   return best ?? { songIds: [], totalSec: 0 }
 }
