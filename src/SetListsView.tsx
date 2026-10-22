@@ -11,6 +11,7 @@ import {
   type SetList,
   type Song,
 } from './lib/setlist'
+import { generationNotice } from './lib/notices'
 import { describeTemplate, type Template } from './lib/templates'
 import { SheetView } from './SheetView'
 
@@ -34,16 +35,6 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
   const selected = setLists.find((s) => s.id === selectedId) ?? null
   const template = templates.find((t) => t.id === templateId) ?? null
 
-  function shortfallNotice(t: Template, totalSec: number): string {
-    if (t.limitType === 'minutes' && totalSec < t.limitValue * 60 * 0.9) {
-      return `Your library only has ${formatDuration(totalSec)} of music to work with, so this set is shorter than the ${t.limitValue} minute target. Add more songs to fill it.`
-    }
-    if (t.limitType === 'songs' && songs.length < t.limitValue) {
-      return `Your library only has ${songs.length} songs, so this set has fewer than ${t.limitValue}.`
-    }
-    return ''
-  }
-
   function create(e: FormEvent) {
     e.preventDefault()
     const finalName = name.trim() || template?.name || ''
@@ -54,7 +45,7 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
       if (songs.length === 0) return setNotice('Add some songs to your library first.')
       const result = generateSet(template, songs, setLists)
       songIds = result.songIds
-      message = shortfallNotice(template, result.totalSec)
+      message = generationNotice(template, result.totalSec, songs)
     }
     const set: SetList = {
       id: newId(),
@@ -95,7 +86,7 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
       setLists.filter((s) => s.id !== set.id),
     )
     update(set.id, { songIds: result.songIds })
-    setNotice(shortfallNotice(t, result.totalSec))
+    setNotice(generationNotice(t, result.totalSec, songs))
   }
 
   const inSet = selected ? setListSongs(selected, songs) : []

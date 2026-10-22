@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { allocate, generateSet, mulberry32, planTempos } from './generator'
 import { makeSong } from './testUtils'
 import type { SetList, Song, Tempo } from './setlist'
+import { starterSongsMissingFrom } from '../data/starterLibrary'
 import { BUILT_IN_TEMPLATES, type Template } from './templates'
 
 const openMic = BUILT_IN_TEMPLATES.find((t) => t.id === 'open-mic-opener')!
@@ -93,6 +94,17 @@ describe('generateSet', () => {
   it('lands close to a time target', () => {
     const result = generateSet(fullShow, songs, [], { seed: 3, today: '2026-06-01' })
     expect(Math.abs(result.totalSec - fullShow.limitValue * 60)).toBeLessThan(150)
+  })
+
+  it('lands within a minute and a half of 30 and 45 minute targets on a real-sized library', () => {
+    const real = starterSongsMissingFrom([])
+    for (const id of ['short-set-30', 'short-set']) {
+      const t = BUILT_IN_TEMPLATES.find((x) => x.id === id)!
+      for (let seed = 0; seed < 150; seed++) {
+        const result = generateSet(t, real, [], { seed, today: '2026-10-22' })
+        expect(Math.abs(result.totalSec - t.limitValue * 60)).toBeLessThanOrEqual(90)
+      }
+    }
   })
 
   it('uses every song when the library cannot reach the time target', () => {
