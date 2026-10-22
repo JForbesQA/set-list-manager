@@ -1,22 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatDuration,
+  lastPlayed,
   moveItem,
+  normalizeSong,
   parseDuration,
   setListSongs,
   totalDuration,
   type SetList,
-  type Song,
 } from './setlist'
-
-const song = (id: string, durationSec: number): Song => ({
-  id,
-  title: id,
-  artist: 'Artist',
-  key: 'C',
-  bpm: 120,
-  durationSec,
-})
+import { makeSong } from './testUtils'
 
 describe('formatDuration', () => {
   it('formats minutes and seconds', () => {
@@ -54,7 +47,7 @@ describe('moveItem', () => {
 })
 
 describe('set list helpers', () => {
-  const songs = [song('a', 100), song('b', 200)]
+  const songs = [makeSong('a', 100), makeSong('b', 200)]
   const set: SetList = { id: 's', name: 'Gig', date: '', venue: '', songIds: ['b', 'missing', 'a'] }
 
   it('keeps set order and skips missing songs', () => {
@@ -62,5 +55,45 @@ describe('set list helpers', () => {
   })
   it('totals duration', () => {
     expect(totalDuration(set, songs)).toBe(300)
+  })
+})
+
+describe('normalizeSong', () => {
+  it('upgrades a v1 song: drops bpm, adds tempo, notes and review flag', () => {
+    const song = normalizeSong({ id: 'x', title: 'Old', artist: 'A', key: 'G', bpm: 120, durationSec: 180 })
+    expect(song).toEqual({
+      id: 'x',
+      title: 'Old',
+      artist: 'A',
+      key: 'G',
+      tempo: null,
+      durationSec: 180,
+      notes: '',
+      needsReview: false,
+    })
+  })
+  it('rejects songs without a title or duration', () => {
+    expect(normalizeSong({ title: '', durationSec: 100 })).toBeNull()
+    expect(normalizeSong({ title: 'x', durationSec: 0 })).toBeNull()
+    expect(normalizeSong('nope')).toBeNull()
+  })
+  it('ignores an invalid tempo', () => {
+    expect(normalizeSong({ title: 'x', durationSec: 60, tempo: 'fast' })?.tempo).toBeNull()
+  })
+})
+
+describe('lastPlayed', () => {
+  const sets: SetList[] = [
+    { id: '1', name: 'Old', date: '2026-01-10', venue: '', songIds: ['a'] },
+    { id: '2', name: 'New', date: '2026-03-05', venue: '', songIds: ['a', 'b'] },
+    { id: '3', name: 'Undated', date: '', venue: '', songIds: ['c'] },
+  ]
+  it('returns the most recent date', () => {
+    expect(lastPlayed('a', sets)).toBe('2026-03-05')
+    expect(lastPlayed('b', sets)).toBe('2026-03-05')
+  })
+  it('returns null for never played or undated sets', () => {
+    expect(lastPlayed('c', sets)).toBeNull()
+    expect(lastPlayed('zzz', sets)).toBeNull()
   })
 })

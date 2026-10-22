@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 
-export function useLocalStorage<T>(key: string, initial: T) {
+/**
+ * `migrate` turns whatever was stored (possibly from an older app version) into a valid value.
+ */
+export function useLocalStorage<T>(key: string, initial: T, migrate?: (raw: unknown) => T) {
   const [value, setValue] = useState<T>(() => {
     try {
       const raw = localStorage.getItem(key)
-      return raw ? (JSON.parse(raw) as T) : initial
+      if (!raw) return initial
+      const parsed: unknown = JSON.parse(raw)
+      return migrate ? migrate(parsed) : (parsed as T)
     } catch {
       return initial
     }
