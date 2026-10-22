@@ -1,7 +1,9 @@
 .app {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px;
+  /* Keep content clear of the iPhone notch / home indicator when installed. */
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 header {

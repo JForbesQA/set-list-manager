@@ -1,14 +1,23 @@
 # Set List Manager
 
-A small personal app for building gig set lists: keep a song library (title, artist, key, BPM, duration), then assemble ordered set lists with a running total time. Data is stored in your browser's `localStorage`; there is no backend.
+A small personal app for building gig set lists from a song library. Data is stored in your browser's `localStorage`; there is no backend.
 
 ## Features
 
-- Song library with add, delete and search
-- Set lists with name, date and venue
-- Add songs to a set, reorder (move up / down) and remove
-- Live total running time per set list
-- Deleting a song also removes it from every set list
+- Song library: title, artist, key, tempo (slow / medium / high), duration, notes; add, edit, delete, search
+- "Needs review" flag for drafted data, with one-tap Confirm; last-played date per song
+- Starter library of drafted songs to get going (durations from MusicBrainz and published album lengths)
+- Set lists with name, date and venue; add, reorder, remove, duplicate; running total time
+- Templates (open mic opener, short set, full show, plus your own) and a generator that balances tempo, avoids
+  repeating an artist back to back and favours songs you have not played recently
+- Backup: download and restore everything as one JSON file
+- Installable on iPhone as an offline app (PWA)
+
+## Install on iPhone
+
+Open the deployed site in Safari, tap Share, then **Add to Home Screen**. It then launches full screen and works
+offline. The home-screen app has its own storage, so open **Backup** on your laptop version, download a backup, and
+restore it in the phone app (AirDrop or Files works for moving the file).
 
 ## Develop
 
@@ -18,6 +27,7 @@ npm run dev     # local dev server
 npm test        # unit tests (Vitest)
 npm run lint
 npm run build   # production build into dist/
+npx pwa-assets-generator   # regenerate icons from public/icon.svg
 ```
 
 Requires Node 22+.
