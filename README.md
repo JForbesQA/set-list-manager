@@ -14,7 +14,8 @@ A small personal app for building gig set lists from a song library. Data is sto
   the mix. The generator also avoids repeating an artist back to back, favours songs you have not played recently,
   and prefers fewer capo changes
 - Readable set list sheet modelled on a printed set list (two numbered columns, artist beneath each title) with
-  options for key and capo, tempo, times and notes, a large-text stage mode, print / save as PDF, and share or copy as text
+  options for key and capo, tempo, times and notes, a large-text stage mode, and Save as PDF / Save as Word (.docx)
+  files (through the share sheet on iPhone, where web apps cannot print), print on desktop, and share or copy as text
 - Backup: share (iPhone share sheet, Save to Files, AirDrop) or download everything as one JSON file, and restore it
 - Installable on iPhone as an offline app (PWA)
 

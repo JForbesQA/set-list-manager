@@ -47,6 +47,9 @@ export function allocate(total: number, weights: Record<Tempo, number>): Record<
 /** A mild nudge, so tempo and variety still win, towards fewer capo moves on stage. */
 const CAPO_CHANGE_PENALTY = 0.4
 
+/** How many different random draws to try when aiming for a time target. */
+const ATTEMPTS = 40
+
 const TIE_ORDER: Tempo[] = ['medium', 'high', 'slow']
 
 /** One random tempo, weighted by the mix, skipping `avoid` unless nothing else has any weight. */
@@ -171,22 +174,27 @@ export function generateSet(
     return build(Math.min(template.limitValue, songs.length), template, songs, setLists, seed, today)
   }
 
-  // Time-based: try a few song counts around the estimate and keep the closest to the target.
+  // Time-based: try song counts around the estimate, and several different random draws, and keep
+  // the first set that lands close enough to the target (or the closest one if none does).
   const target = template.limitValue * 60
+  const tolerance = Math.max(45, target * 0.02)
   const avg = songs.reduce((s, x) => s + x.durationSec, 0) / songs.length
   const estimate = Math.max(1, Math.round(target / avg))
-  let best: GeneratedSet | null = null
   // A library that cannot reach the target just uses every song it has.
   const from = Math.min(Math.max(1, estimate - 2), songs.length)
   const to = Math.min(songs.length, estimate + 2)
-  for (let n = from; n <= to; n++) {
-    const candidate = build(n, template, songs, setLists, seed, today)
-    const better =
-      best === null ||
-      Math.abs(candidate.totalSec - target) < Math.abs(best.totalSec - target) ||
-      (Math.abs(candidate.totalSec - target) === Math.abs(best.totalSec - target) &&
-        candidate.songIds.length < best.songIds.length)
-    if (better) best = candidate
+  let best: GeneratedSet | null = null
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    const attemptSeed = seed + attempt * 7919
+    for (let n = from; n <= to; n++) {
+      const candidate = build(n, template, songs, setLists, attemptSeed, today)
+      const diff = Math.abs(candidate.totalSec - target)
+      const bestDiff = best === null ? Infinity : Math.abs(best.totalSec - target)
+      if (diff < bestDiff || (diff === bestDiff && candidate.songIds.length < (best?.songIds.length ?? Infinity))) {
+        best = candidate
+      }
+    }
+    if (best !== null && Math.abs(best.totalSec - target) <= tolerance) break
   }
   return best ?? { songIds: [], totalSec: 0 }
 }

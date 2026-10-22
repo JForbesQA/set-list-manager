@@ -4,11 +4,14 @@ import {
   DEFAULT_SHEET,
   normalizeSheetOptions,
   setListText,
+  fileStem,
+  sheetModel,
   sheetSubtitle,
   songExtras,
   type SheetOptions,
 } from './lib/sheet'
 import { formatDuration, setListSongs, totalDuration, type SetList, type Song } from './lib/setlist'
+import { shareOrDownload } from './lib/deliver'
 
 interface Props {
   set: SetList
@@ -32,6 +35,32 @@ export function SheetView({ set, songs, onClose }: Props) {
   const subtitle = sheetSubtitle(set)
   const text = () => setListText(set, songs, options)
   const canShareText = typeof navigator.share === 'function'
+  const [busy, setBusy] = useState(false)
+  // Installed iPhone web apps (home screen) ignore window.print(), so don't offer a button that does nothing.
+  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
+
+  async function saveFile(kind: 'pdf' | 'docx') {
+    setBusy(true)
+    setMessage('')
+    try {
+      const model = sheetModel(set, songs, options)
+      let blob: Blob
+      if (kind === 'pdf') {
+        blob = await (await import('./lib/pdfExport')).buildPdf(model)
+      } else {
+        blob = await (await import('./lib/docxExport')).buildDocx(model)
+      }
+      const type = kind === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      const file = new File([blob], `${fileStem(set.name)}.${kind}`, { type })
+      const result = await shareOrDownload(file)
+      if (result === 'shared') setMessage('Shared. Choose Save to Files to keep a copy.')
+      if (result === 'downloaded') setMessage('File downloaded.')
+    } catch {
+      setMessage('Could not create the file here. Try Share text or Copy text.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function share() {
     try {
@@ -58,9 +87,17 @@ export function SheetView({ set, songs, onClose }: Props) {
           <button type="button" onClick={onClose}>
             Back to set lists
           </button>
-          <button type="button" onClick={() => window.print()}>
-            Print / Save as PDF
+          <button type="button" disabled={busy} onClick={() => saveFile('pdf')}>
+            Save as PDF
           </button>
+          <button type="button" disabled={busy} onClick={() => saveFile('docx')}>
+            Save as Word (.docx)
+          </button>
+          {!iosStandalone && (
+            <button type="button" onClick={() => window.print()}>
+              Print
+            </button>
+          )}
           {canShareText && (
             <button type="button" onClick={share}>
               Share text

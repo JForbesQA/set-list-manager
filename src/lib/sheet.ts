@@ -66,3 +66,43 @@ export function setListText(set: SetList, songs: Song[], o: SheetOptions): strin
   }
   return lines.join('\n')
 }
+
+export interface SheetItem {
+  title: string
+  artist: string
+  extras: string
+}
+
+/** Everything a file export needs, already resolved from the set list and the chosen options. */
+export interface SheetModel {
+  title: string
+  subtitle: string
+  /** e.g. "8 songs · 30:02", or '' when times are switched off. */
+  total: string
+  large: boolean
+  items: SheetItem[]
+}
+
+export function sheetModel(set: SetList, songs: Song[], o: SheetOptions): SheetModel {
+  const inSet = setListSongs(set, songs)
+  return {
+    title: set.name,
+    subtitle: sheetSubtitle(set),
+    total: o.showDuration && inSet.length > 0 ? `${inSet.length} songs · ${formatDuration(totalDuration(set, songs))}` : '',
+    large: o.large,
+    items: inSet.map((s) => ({
+      title: s.title,
+      artist: o.showArtist ? s.artist : '',
+      extras: songExtras(s, o).join(' · '),
+    })),
+  }
+}
+
+/** A safe file name stem from a set list name, e.g. "Friday Night Gig" -> "friday-night-gig". */
+export function fileStem(name: string): string {
+  const stem = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return stem || 'set-list'
+}
