@@ -88,6 +88,9 @@ export default function App() {
           />
         )}
       </main>
+      <footer className="version">
+        Set List Manager v{__APP_VERSION__} · built {__BUILD_DATE__} · {__COMMIT__}
+      </footer>
     </div>
   )
 }
