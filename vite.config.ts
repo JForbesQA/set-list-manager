@@ -6,6 +6,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // Relative base so the build works on GitHub Pages project sites (/<repo>/).
   base: './',
+  // Shown in the app footer so you can tell which version a device is running.
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+    __COMMIT__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? 'local'),
+  },
   plugins: [
     react(),
     VitePWA({

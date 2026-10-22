@@ -9,8 +9,12 @@ A small personal app for building gig set lists from a song library. Data is sto
 - "Needs review" flag for drafted data, with one-tap Confirm; last-played date per song
 - Starter library of drafted songs to get going (durations from MusicBrainz and published album lengths)
 - Set lists with name, date and venue; add, reorder, remove, duplicate; running total time
-- Templates (open mic opener, short set, full show, plus your own) and a generator that balances tempo, avoids
-  repeating an artist back to back and favours songs you have not played recently
+- Templates (open mic opener, 30 and 45 minute sets, 3 and 4 hour shows, plus your own) weighted towards high and
+  medium tempo songs. A tempo plan per template (strict, loose or anything goes) controls how closely a set follows
+  the mix. The generator also avoids repeating an artist back to back, favours songs you have not played recently,
+  and prefers fewer capo changes
+- Readable set list sheet modelled on a printed set list (two numbered columns, artist beneath each title) with
+  options for key and capo, tempo, times and notes, a large-text stage mode, print / save as PDF, and share or copy as text
 - Backup: share (iPhone share sheet, Save to Files, AirDrop) or download everything as one JSON file, and restore it
 - Installable on iPhone as an offline app (PWA)
 
