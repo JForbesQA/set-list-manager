@@ -1,5 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 import { backupFile, canShareFile, parseBackup, type BackupData } from './lib/backup'
+import { shareFile } from './lib/deliver'
+import { DEFAULT_SETTINGS } from './lib/settings'
 
 interface Props {
   data: BackupData
@@ -10,12 +12,12 @@ export function BackupView({ data, onRestore }: Props) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  const [shareable] = useState(() => canShareFile(backupFile({ songs: [], setLists: [], templates: [] })))
+  const [shareable] = useState(() => canShareFile(backupFile({ songs: [], setLists: [], templates: [], settings: DEFAULT_SETTINGS })))
 
   async function share() {
     setError('')
     try {
-      await navigator.share({ files: [backupFile(data)], title: 'Set List Manager backup' })
+      await shareFile(backupFile(data))
       setMessage('Backup shared. If you chose Save to Files, it is in the folder you picked.')
     } catch (err) {
       // Closing the share sheet without choosing anything is not an error.

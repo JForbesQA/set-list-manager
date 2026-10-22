@@ -56,6 +56,11 @@ describe('set list helpers', () => {
   it('totals duration', () => {
     expect(totalDuration(set, songs)).toBe(300)
   })
+  it('adds time between songs, but not after the last one', () => {
+    expect(totalDuration(set, songs, 30)).toBe(330) // 2 songs found, 1 gap
+    expect(totalDuration({ ...set, songIds: [] }, songs, 30)).toBe(0)
+    expect(totalDuration({ ...set, songIds: ['a'] }, songs, 30)).toBe(100)
+  })
 })
 
 describe('normalizeSong', () => {

@@ -17,6 +17,7 @@ interface Props {
   set: SetList
   songs: Song[]
   onClose: () => void
+  gapSec: number
 }
 
 const TOGGLES: [keyof SheetOptions, string][] = [
@@ -28,12 +29,12 @@ const TOGGLES: [keyof SheetOptions, string][] = [
   ['large', 'Large text (stage)'],
 ]
 
-export function SheetView({ set, songs, onClose }: Props) {
+export function SheetView({ set, songs, onClose, gapSec }: Props) {
   const [options, setOptions] = useLocalStorage<SheetOptions>('slm.sheet', DEFAULT_SHEET, normalizeSheetOptions)
   const [message, setMessage] = useState('')
   const inSet = setListSongs(set, songs)
   const subtitle = sheetSubtitle(set)
-  const text = () => setListText(set, songs, options)
+  const text = () => setListText(set, songs, options, gapSec)
   const canShareText = typeof navigator.share === 'function'
   const [busy, setBusy] = useState(false)
   // Installed iPhone web apps (home screen) ignore window.print(), so don't offer a button that does nothing.
@@ -43,7 +44,7 @@ export function SheetView({ set, songs, onClose }: Props) {
     setBusy(true)
     setMessage('')
     try {
-      const model = sheetModel(set, songs, options)
+      const model = sheetModel(set, songs, options, gapSec)
       let blob: Blob
       if (kind === 'pdf') {
         blob = await (await import('./lib/pdfExport')).buildPdf(model)
@@ -148,7 +149,7 @@ export function SheetView({ set, songs, onClose }: Props) {
         )}
         {options.showDuration && inSet.length > 0 && (
           <p className="sheet-total">
-            {inSet.length} songs · {formatDuration(totalDuration(set, songs))}
+            {inSet.length} songs · {formatDuration(totalDuration(set, songs, gapSec))}
           </p>
         )}
       </article>

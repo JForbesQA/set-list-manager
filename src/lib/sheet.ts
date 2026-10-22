@@ -50,7 +50,7 @@ export function sheetSubtitle(set: SetList): string {
 }
 
 /** Plain text version of the sheet, for messages, email or pasting somewhere else. */
-export function setListText(set: SetList, songs: Song[], o: SheetOptions): string {
+export function setListText(set: SetList, songs: Song[], o: SheetOptions, gapSec = 0): string {
   const inSet = setListSongs(set, songs)
   const lines = [set.name]
   const sub = sheetSubtitle(set)
@@ -62,7 +62,7 @@ export function setListText(set: SetList, songs: Song[], o: SheetOptions): strin
     lines.push(extras.length > 0 ? `${head} (${extras.join(' · ')})` : head)
   })
   if (o.showDuration && inSet.length > 0) {
-    lines.push('', `${inSet.length} songs · ${formatDuration(totalDuration(set, songs))}`)
+    lines.push('', `${inSet.length} songs · ${formatDuration(totalDuration(set, songs, gapSec))}`)
   }
   return lines.join('\n')
 }
@@ -83,12 +83,13 @@ export interface SheetModel {
   items: SheetItem[]
 }
 
-export function sheetModel(set: SetList, songs: Song[], o: SheetOptions): SheetModel {
+export function sheetModel(set: SetList, songs: Song[], o: SheetOptions, gapSec = 0): SheetModel {
   const inSet = setListSongs(set, songs)
   return {
     title: set.name,
     subtitle: sheetSubtitle(set),
-    total: o.showDuration && inSet.length > 0 ? `${inSet.length} songs · ${formatDuration(totalDuration(set, songs))}` : '',
+    total:
+      o.showDuration && inSet.length > 0 ? `${inSet.length} songs · ${formatDuration(totalDuration(set, songs, gapSec))}` : '',
     large: o.large,
     items: inSet.map((s) => ({
       title: s.title,

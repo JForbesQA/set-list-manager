@@ -63,8 +63,10 @@ export function setListSongs(set: SetList, songs: Song[]): Song[] {
   })
 }
 
-export function totalDuration(set: SetList, songs: Song[]): number {
-  return setListSongs(set, songs).reduce((sum, s) => sum + s.durationSec, 0)
+/** Music time plus `gapSec` between each pair of songs (no gap after the last one). */
+export function totalDuration(set: SetList, songs: Song[], gapSec = 0): number {
+  const inSet = setListSongs(set, songs)
+  return inSet.reduce((sum, s) => sum + s.durationSec, 0) + Math.max(0, inSet.length - 1) * gapSec
 }
 
 export function newId(): string {

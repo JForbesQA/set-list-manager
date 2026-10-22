@@ -5,6 +5,7 @@ import { SetListsView } from './SetListsView'
 import { SongsView } from './SongsView'
 import { TemplatesView } from './TemplatesView'
 import { starterSongsMissingFrom } from './data/starterLibrary'
+import { DEFAULT_SETTINGS, normalizeSettings, type Settings } from './lib/settings'
 import { useLocalStorage } from './lib/useLocalStorage'
 import { normalizeSetList, normalizeSong, type SetList, type Song } from './lib/setlist'
 import { BUILT_IN_TEMPLATES, normalizeTemplate, type Template } from './lib/templates'
@@ -27,6 +28,7 @@ export default function App() {
   const [songs, setSongs] = useLocalStorage<Song[]>('slm.songs', [], migrateList(normalizeSong))
   const [setLists, setSetLists] = useLocalStorage<SetList[]>('slm.setlists', [], migrateList(normalizeSetList))
   const [templates, setTemplates] = useLocalStorage<Template[]>('slm.templates', [], migrateList(normalizeTemplate))
+  const [settings, setSettings] = useLocalStorage<Settings>('slm.settings', DEFAULT_SETTINGS, normalizeSettings)
   const [tab, setTab] = useState<Tab>('songs')
 
   function saveSong(song: Song) {
@@ -71,6 +73,8 @@ export default function App() {
             songs={songs}
             setLists={setLists}
             templates={[...BUILT_IN_TEMPLATES, ...templates]}
+            gapSec={settings.gapSec}
+            onGapChange={(gapSec) => setSettings({ ...settings, gapSec })}
             onChange={setSetLists}
           />
         )}
@@ -79,11 +83,12 @@ export default function App() {
         )}
         {tab === 'backup' && (
           <BackupView
-            data={{ songs, setLists, templates }}
+            data={{ songs, setLists, templates, settings }}
             onRestore={(d) => {
               setSongs(d.songs)
               setSetLists(d.setLists)
               setTemplates(d.templates)
+              setSettings(d.settings)
             }}
           />
         )}
