@@ -6,7 +6,10 @@ export interface Song {
   id: string
   title: string
   artist: string
+  /** Sounding key (what the audience hears), e.g. "F#m". */
   key: string
+  /** Capo fret, 0 for none. Shapes are worked out from key and capo. */
+  capo: number
   tempo: Tempo | null
   durationSec: number
   /** Capo, tuning, lyrics link, which version you play, etc. */
@@ -84,6 +87,7 @@ export function normalizeSong(raw: unknown): Song | null {
     title,
     artist: typeof r.artist === 'string' ? r.artist.trim() : '',
     key: typeof r.key === 'string' ? r.key.trim() : '',
+    capo: typeof r.capo === 'number' && Number.isInteger(r.capo) && r.capo >= 0 && r.capo <= 11 ? r.capo : 0,
     tempo: isTempo(r.tempo) ? r.tempo : null,
     durationSec,
     notes: typeof r.notes === 'string' ? r.notes.trim() : '',

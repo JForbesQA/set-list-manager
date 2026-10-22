@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { STARTER_COUNT } from './data/starterLibrary'
+import { describeKey, MAX_CAPO, shapeKey } from './lib/chords'
 import {
   compareSongs,
   formatDuration,
@@ -19,7 +20,7 @@ interface Props {
   onLoadStarter: () => number
 }
 
-const EMPTY = { title: '', artist: '', key: '', tempo: '', duration: '', notes: '' }
+const EMPTY = { title: '', artist: '', key: '', capo: '0', tempo: '', duration: '', notes: '' }
 
 function formatDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`)
@@ -52,6 +53,7 @@ export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: 
       title: song.title,
       artist: song.artist,
       key: song.key,
+      capo: String(song.capo),
       tempo: song.tempo ?? '',
       duration: formatDuration(song.durationSec),
       notes: song.notes,
@@ -69,6 +71,7 @@ export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: 
       title: form.title.trim(),
       artist: form.artist.trim(),
       key: form.key.trim(),
+      capo: Number(form.capo),
       tempo: isTempo(form.tempo) ? form.tempo : null,
       durationSec,
       notes: form.notes.trim(),
@@ -98,8 +101,19 @@ export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: 
           <input {...field('artist')} />
         </label>
         <label>
-          Key
-          <input {...field('key')} placeholder="e.g. Am" />
+          Key you play in
+          <input {...field('key')} placeholder="e.g. F#m" />
+        </label>
+        <label>
+          Capo
+          <select {...field('capo')}>
+            <option value="0">No capo</option>
+            {Array.from({ length: MAX_CAPO }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                Fret {i + 1}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Tempo
@@ -118,6 +132,13 @@ export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: 
           Notes
           <input {...field('notes')} placeholder="Capo, tuning, which version you play…" />
         </label>
+        {Number(form.capo) > 0 && form.key.trim() && (
+          <p className="meta wide">
+            {shapeKey(form.key, Number(form.capo))
+              ? `Playing ${form.key.trim()} with the capo on fret ${form.capo} means you finger ${shapeKey(form.key, Number(form.capo))} shapes.`
+              : 'Enter the key like F#m or Bb to see the shapes.'}
+          </p>
+        )}
         <div className="actions">
           <button type="submit">{editing ? 'Save changes' : 'Add song'}</button>
           {editing && (
@@ -182,7 +203,7 @@ export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: 
                   {s.needsReview && <span className="badge">Needs review</span>}
                   <div className="meta">
                     {[
-                      s.key && `Key ${s.key}`,
+                      describeKey(s),
                       s.tempo && `${s.tempo[0].toUpperCase()}${s.tempo.slice(1)} tempo`,
                       formatDuration(s.durationSec),
                       played ? `Last played ${formatDate(played)}` : 'Never played',

@@ -4,7 +4,8 @@ A small personal app for building gig set lists from a song library. Data is sto
 
 ## Features
 
-- Song library: title, artist, key, tempo (slow / medium / high), duration, notes; add, edit, delete, search
+- Song library: title, artist, key you play in, capo, tempo (slow / medium / high), duration, notes; add, edit, delete, search
+- Capo support: enter the sounding key and capo fret and the app shows the shapes you finger, e.g. `F#m · Capo 2 (Em)`
 - "Needs review" flag for drafted data, with one-tap Confirm; last-played date per song
 - Starter library of drafted songs to get going (durations from MusicBrainz and published album lengths)
 - Set lists with name, date and venue; add, reorder, remove, duplicate; running total time

@@ -1,11 +1,19 @@
 import { newId, songKeyOf, type Song, type Tempo } from '../lib/setlist'
 
-type Starter = [title: string, artist: string, durationSec: number, tempo: Tempo, key?: string, notes?: string]
+type Starter = [
+  title: string,
+  artist: string,
+  durationSec: number,
+  tempo: Tempo,
+  key?: string,
+  notes?: string,
+  capo?: number,
+]
 
 /**
  * Starter repertoire. Durations come mostly from MusicBrainz studio recordings (a few from the
  * commonly published album length), tempos are rough slow / medium / high calls, and keys are the
- * original recording's key where it is well known. Everything is flagged "Needs review" until
+ * original recording's key where it is well known (a few are the key Jon plays, with the capo). Everything is flagged "Needs review" until
  * confirmed in the app, because the keys, capo and length you actually play may differ.
  */
 const STARTER: Starter[] = [
@@ -19,7 +27,7 @@ const STARTER: Starter[] = [
   ['Island in the Sun', 'Weezer', 200, 'medium'],
   ['Heart of Gold', 'Neil Young', 188, 'slow', 'Em'],
   ['Norwegian Wood', 'The Beatles', 125, 'slow'],
-  ['I Shot the Sheriff', 'Bob Marley', 265, 'medium', 'Gm', 'Eric Clapton version'],
+  ['I Shot the Sheriff', 'Bob Marley', 265, 'medium', 'F#m', 'Eric Clapton version', 2],
   ['Unwell', 'Matchbox Twenty', 229, 'slow'],
   ['The Boxer', 'Simon & Garfunkel', 311, 'medium'],
   ["Hasn't Hit Me Yet", 'Blue Rodeo', 313, 'medium'],
@@ -48,8 +56,8 @@ const STARTER: Starter[] = [
 /** Starter songs that are not already in the library (matched on title + artist). */
 export function starterSongsMissingFrom(existing: Song[]): Song[] {
   const have = new Set(existing.map(songKeyOf))
-  return STARTER.flatMap(([title, artist, durationSec, tempo, key = '', notes = '']) => {
-    const song: Song = { id: newId(), title, artist, key, tempo, durationSec, notes, needsReview: true }
+  return STARTER.flatMap(([title, artist, durationSec, tempo, key = '', notes = '', capo = 0]) => {
+    const song: Song = { id: newId(), title, artist, key, capo, tempo, durationSec, notes, needsReview: true }
     return have.has(songKeyOf(song)) ? [] : [song]
   })
 }

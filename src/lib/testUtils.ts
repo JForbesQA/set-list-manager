@@ -5,6 +5,7 @@ export const makeSong = (id: string, durationSec = 200, extra: Partial<Song> = {
   title: id,
   artist: `Artist ${id}`,
   key: '',
+  capo: 0,
   tempo: 'medium',
   durationSec,
   notes: '',

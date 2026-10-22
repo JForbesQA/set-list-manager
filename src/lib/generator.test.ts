@@ -95,6 +95,22 @@ describe('generateSet', () => {
     }
   })
 
+  it('leans towards songs with the same capo as the previous song', () => {
+    const pool = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) =>
+      makeSong(id, 200, { tempo: 'medium', capo: i < 3 ? 0 : 2, artist: id }),
+    )
+    const pair: Template = { ...openMic, limitValue: 2, mix: { slow: 0, medium: 1, high: 0 }, opener: null, closer: null }
+    const byId = new Map(pool.map((s) => [s.id, s]))
+    let sameCapo = 0
+    const runs = 300
+    for (let seed = 0; seed < runs; seed++) {
+      const [first, second] = generateSet(pair, pool, [], { seed, today: '2026-06-01' }).songIds
+      if (byId.get(first)!.capo === byId.get(second)!.capo) sameCapo++
+    }
+    // With no preference only 2 of the 5 remaining songs match (40%).
+    expect(sameCapo / runs).toBeGreaterThan(0.5)
+  })
+
   it('falls back to other tempos when a tempo has no songs', () => {
     const allSlow = library(8).map((s) => ({ ...s, tempo: 'slow' as const }))
     const result = generateSet(openMic, allSlow, [], { seed: 2 })
