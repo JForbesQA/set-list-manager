@@ -11,18 +11,46 @@ export interface Template {
   /** Tempo of the first / last song, or null for no preference. */
   opener: Tempo | null
   closer: Tempo | null
+  /**
+   * How closely to follow the tempo mix:
+   * strict = exact counts of each tempo, no back-to-back repeats;
+   * loose = each slot is a random draw weighted by the mix (any set can drift);
+   * any = ignore tempo entirely.
+   */
+  variety: Variety
   builtIn?: boolean
 }
 
+export type Variety = 'strict' | 'loose' | 'any'
+
+export const VARIETY_LABELS: Record<Variety, string> = {
+  strict: 'Strict: exact mix, no repeats back to back',
+  loose: 'Loose: random, weighted by the mix',
+  any: 'Anything goes: ignore tempo',
+}
+
+// Weighted towards medium and high tempo songs (high the most) for a lively room.
 export const BUILT_IN_TEMPLATES: Template[] = [
   {
     id: 'open-mic-opener',
     name: 'Open mic opener',
     limitType: 'songs',
     limitValue: 4,
-    mix: { slow: 1, medium: 2, high: 1 },
+    mix: { slow: 1, medium: 3, high: 4 },
     opener: 'medium',
     closer: 'high',
+    variety: 'loose',
+    builtIn: true,
+  },
+  {
+    id: 'short-set-30',
+    name: 'Short set (30 min)',
+    limitType: 'minutes',
+    limitValue: 30,
+    mix: { slow: 1, medium: 3, high: 4 },
+    opener: 'medium',
+    closer: 'high',
+    variety: 'loose',
     builtIn: true,
   },
   {
@@ -30,9 +58,10 @@ export const BUILT_IN_TEMPLATES: Template[] = [
     name: 'Short set (45 min)',
     limitType: 'minutes',
     limitValue: 45,
-    mix: { slow: 2, medium: 3, high: 2 },
+    mix: { slow: 1, medium: 3, high: 4 },
     opener: 'medium',
     closer: 'high',
+    variety: 'loose',
     builtIn: true,
   },
   {
@@ -41,9 +70,22 @@ export const BUILT_IN_TEMPLATES: Template[] = [
     name: 'Full show (3-hour slot)',
     limitType: 'minutes',
     limitValue: 120,
-    mix: { slow: 3, medium: 4, high: 3 },
+    mix: { slow: 2, medium: 3, high: 4 },
     opener: 'medium',
     closer: 'high',
+    variety: 'loose',
+    builtIn: true,
+  },
+  {
+    id: 'full-show-4h',
+    // Same ratio as the 3-hour slot: about 2 hours 40 minutes of music in 4 hours.
+    name: 'Full show (4-hour slot)',
+    limitType: 'minutes',
+    limitValue: 160,
+    mix: { slow: 2, medium: 3, high: 4 },
+    opener: 'medium',
+    closer: 'high',
+    variety: 'loose',
     builtIn: true,
   },
 ]
@@ -52,7 +94,8 @@ export function describeTemplate(t: Template): string {
   const limit = t.limitType === 'songs' ? `${t.limitValue} songs` : `about ${t.limitValue} min`
   const mix = TEMPOS.map((k) => `${t.mix[k]} ${k}`).join(' : ')
   const ends = [t.opener && `opens ${t.opener}`, t.closer && `closes ${t.closer}`].filter(Boolean).join(', ')
-  return [limit, `mix ${mix}`, ends].filter(Boolean).join(' · ')
+  if (t.variety === 'any') return [limit, 'any tempo'].join(' · ')
+  return [limit, `${t.variety === 'strict' ? 'exact' : 'weighted'} mix ${mix}`, ends].filter(Boolean).join(' · ')
 }
 
 export function normalizeTemplate(raw: unknown): Template | null {
@@ -73,5 +116,6 @@ export function normalizeTemplate(raw: unknown): Template | null {
     mix,
     opener: isTempo(r.opener) ? r.opener : null,
     closer: isTempo(r.closer) ? r.closer : null,
+    variety: r.variety === 'strict' || r.variety === 'any' ? r.variety : 'loose',
   }
 }

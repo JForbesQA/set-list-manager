@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { isTempo, newId, TEMPOS, type Tempo } from './lib/setlist'
-import { describeTemplate, type Template } from './lib/templates'
+import { describeTemplate, VARIETY_LABELS, type Template, type Variety } from './lib/templates'
 
 interface Props {
   builtIn: Template[]
@@ -15,15 +15,17 @@ interface Draft {
   mix: Record<Tempo, string>
   opener: string
   closer: string
+  variety: Variety
 }
 
 const EMPTY: Draft = {
   name: '',
   limitType: 'songs',
   limitValue: '',
-  mix: { slow: '1', medium: '2', high: '1' },
+  mix: { slow: '1', medium: '3', high: '4' },
   opener: '',
   closer: '',
+  variety: 'loose',
 }
 
 function toDraft(t: Template): Draft {
@@ -34,6 +36,7 @@ function toDraft(t: Template): Draft {
     mix: { slow: String(t.mix.slow), medium: String(t.mix.medium), high: String(t.mix.high) },
     opener: t.opener ?? '',
     closer: t.closer ?? '',
+    variety: t.variety,
   }
 }
 
@@ -69,6 +72,7 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
       mix,
       opener: isTempo(draft.opener) ? draft.opener : null,
       closer: isTempo(draft.closer) ? draft.closer : null,
+      variety: draft.variety,
     }
     onChange(editingId ? custom.map((t) => (t.id === editingId ? next : t)) : [...custom, next])
     reset()
@@ -124,8 +128,9 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
     <section aria-labelledby="templates-heading">
       <h2 id="templates-heading">Templates</h2>
       <p className="muted">
-        A template describes a kind of set: how long it is and its balance of slow, medium and high tempo songs.
-        Generate a set list from one on the Set Lists tab.
+        A template describes a kind of set: how long it is and its balance of slow, medium and high tempo songs. The
+        mix is a ratio (for example 1 : 3 : 4), and the tempo plan sets how closely a set has to follow it. Generate a
+        set list from a template on the Set Lists tab.
       </p>
 
       <form onSubmit={submit} className="card form-grid" aria-label={editingId ? 'Edit template' : 'New template'}>
@@ -151,11 +156,22 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
             onChange={(e) => setDraft({ ...draft, limitValue: e.target.value })}
           />
         </label>
+        <label className="wide">
+          Tempo plan
+          <select value={draft.variety} onChange={(e) => setDraft({ ...draft, variety: e.target.value as Variety })}>
+            {(Object.keys(VARIETY_LABELS) as Variety[]).map((v) => (
+              <option key={v} value={v}>
+                {VARIETY_LABELS[v]}
+              </option>
+            ))}
+          </select>
+        </label>
         {TEMPOS.map((t) => (
           <label key={t}>
             {t[0].toUpperCase() + t.slice(1)} share
             <input
               inputMode="numeric"
+              disabled={draft.variety === 'any'}
               value={draft.mix[t]}
               onChange={(e) => setDraft({ ...draft, mix: { ...draft.mix, [t]: e.target.value } })}
             />

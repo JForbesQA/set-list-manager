@@ -49,9 +49,33 @@ const CAPO_CHANGE_PENALTY = 0.4
 
 const TIE_ORDER: Tempo[] = ['medium', 'high', 'slow']
 
-/** Orders tempos for `n` slots: chosen opener/closer at the ends, no repeats back to back where possible. */
-export function planTempos(n: number, t: Pick<Template, 'mix' | 'opener' | 'closer'>): Tempo[] {
+/** One random tempo, weighted by the mix, skipping `avoid` unless nothing else has any weight. */
+function drawTempo(mix: Record<Tempo, number>, rng: () => number, avoid: Tempo | null = null): Tempo {
+  const weight = (t: Tempo) => (t === avoid ? 0 : mix[t])
+  const usable = TEMPOS.some((t) => weight(t) > 0)
+  const w = (t: Tempo) => (usable ? weight(t) : mix[t])
+  const total = TEMPOS.reduce((s, t) => s + w(t), 0)
+  let roll = rng() * total
+  for (const t of TEMPOS) {
+    roll -= w(t)
+    if (roll < 0) return t
+  }
+  return TEMPOS[TEMPOS.length - 1]
+}
+
+/**
+ * Tempo wanted for each of `n` slots (null means any tempo).
+ * strict: exact counts, opener/closer at the ends, no back-to-back repeats where possible.
+ * loose: opener/closer at the ends, every other slot a random draw weighted by the mix.
+ * any: no tempo preference at all.
+ */
+export function planTempos(
+  n: number,
+  t: Pick<Template, 'mix' | 'opener' | 'closer' | 'variety'>,
+  rng: () => number = Math.random,
+): (Tempo | null)[] {
   if (n <= 0) return []
+  if (t.variety === 'any') return Array<null>(n).fill(null)
   if (n === 1) {
     const counts = allocate(1, t.mix)
     return [t.opener ?? t.closer ?? TEMPOS.find((k) => counts[k] > 0) ?? 'medium']
@@ -59,17 +83,28 @@ export function planTempos(n: number, t: Pick<Template, 'mix' | 'opener' | 'clos
   const first = t.opener
   const last = t.closer
   const middleLen = n - (first ? 1 : 0) - (last ? 1 : 0)
-  const counts = allocate(middleLen, t.mix)
   const plan: Tempo[] = first ? [first] : []
-  let prev: Tempo | null = first
-  for (let i = 0; i < middleLen; i++) {
-    const open = TIE_ORDER.filter((k) => counts[k] > 0)
-    const differing = open.filter((k) => k !== prev)
-    const pool = differing.length > 0 ? differing : open
-    const pick = pool.reduce((best, k) => (counts[k] > counts[best] ? k : best), pool[0])
-    counts[pick] -= 1
-    plan.push(pick)
-    prev = pick
+
+  if (t.variety === 'loose') {
+    for (let i = 0; i < middleLen; i++) {
+      const prev = plan[plan.length - 1] ?? null
+      // Never three of the same tempo in a row, including into the closing song.
+      const twoSame = plan.length >= 2 && prev === plan[plan.length - 2]
+      const beforeCloser = i === middleLen - 1 && last !== null && prev === last
+      plan.push(drawTempo(t.mix, rng, twoSame || beforeCloser ? prev : null))
+    }
+  } else {
+    const counts = allocate(middleLen, t.mix)
+    let prev: Tempo | null = first
+    for (let i = 0; i < middleLen; i++) {
+      const open = TIE_ORDER.filter((k) => counts[k] > 0)
+      const differing = open.filter((k) => k !== prev)
+      const pool = differing.length > 0 ? differing : open
+      const pick = pool.reduce((best, k) => (counts[k] > counts[best] ? k : best), pool[0])
+      counts[pick] -= 1
+      plan.push(pick)
+      prev = pick
+    }
   }
   if (last) plan.push(last)
   return plan
@@ -91,16 +126,16 @@ function build(
   today: string,
 ): GeneratedSet {
   const rng = mulberry32(seed)
-  const plan = planTempos(n, template)
+  const plan = planTempos(n, template, rng)
   const chosen: Song[] = []
   const used = new Set<string>()
 
   for (const tempo of plan) {
     const unused = songs.filter((s) => !used.has(s.id))
     if (unused.length === 0) break
-    const exact = unused.filter((s) => s.tempo === tempo)
+    const exact = tempo === null ? [] : unused.filter((s) => s.tempo === tempo)
     const untagged = unused.filter((s) => s.tempo === null)
-    const pool = exact.length > 0 ? exact : untagged.length > 0 ? untagged : unused
+    const pool = tempo === null ? unused : exact.length > 0 ? exact : untagged.length > 0 ? untagged : unused
     const prev = chosen[chosen.length - 1]
 
     let best = pool[0]

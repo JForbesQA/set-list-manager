@@ -12,6 +12,7 @@ import {
   type Song,
 } from './lib/setlist'
 import { describeTemplate, type Template } from './lib/templates'
+import { SheetView } from './SheetView'
 
 interface Props {
   songs: Song[]
@@ -28,6 +29,7 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [addId, setAddId] = useState('')
   const [notice, setNotice] = useState('')
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const selected = setLists.find((s) => s.id === selectedId) ?? null
   const template = templates.find((t) => t.id === templateId) ?? null
@@ -99,6 +101,10 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
   const inSet = selected ? setListSongs(selected, songs) : []
   const available = selected ? songs.filter((s) => !selected.songIds.includes(s.id)).sort(compareSongs) : []
   const selectedTemplate = selected?.templateId ? templates.find((t) => t.id === selected.templateId) : undefined
+
+  if (sheetOpen && selected) {
+    return <SheetView set={selected} songs={songs} onClose={() => setSheetOpen(false)} />
+  }
 
   return (
     <section aria-labelledby="sets-heading">
@@ -194,11 +200,16 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
           {inSet.some((s) => s.capo > 0) && (
             <p className="meta">Capo changes: {capoChanges(inSet)}</p>
           )}
+          <div className="actions">
+            <button type="button" onClick={() => setSheetOpen(true)} disabled={inSet.length === 0}>
+              View / print set list
+            </button>
           {selectedTemplate && (
             <button type="button" onClick={() => regenerate(selected, selectedTemplate)}>
               Regenerate from {selectedTemplate.name}
             </button>
           )}
+          </div>
 
           {inSet.length === 0 ? (
             <p className="muted">This set is empty. Add songs below.</p>

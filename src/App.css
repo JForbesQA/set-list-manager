@@ -239,3 +239,153 @@ h3 {
   font-size: 0.75rem;
   text-align: center;
 }
+
+/* Readable set list sheet, modelled on a printed set list: centred title with a rule,
+   then a numbered list in two columns with the artist in small grey italics under each title. */
+.sheet-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.sheet-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 8px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.sheet-options legend {
+  padding: 0 6px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.sheet-title {
+  margin: 0 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--muted);
+  text-align: center;
+  font-size: 2rem;
+}
+
+.sheet-subtitle {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.sheet-list {
+  columns: 2;
+  column-gap: 40px;
+  margin: 24px 0 0;
+  padding-left: 28px;
+}
+
+.sheet-list li {
+  break-inside: avoid;
+  margin-bottom: 14px;
+}
+
+.sheet-song {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.sheet-artist,
+.sheet-extra {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.sheet-artist {
+  font-style: italic;
+}
+
+.sheet-total {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.sheet-large .sheet-list {
+  columns: 1;
+}
+
+.sheet-large .sheet-song {
+  font-size: 1.9rem;
+  line-height: 1.25;
+}
+
+.sheet-large .sheet-artist,
+.sheet-large .sheet-extra {
+  font-size: 1.1rem;
+}
+
+.sheet-large .sheet-list li {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .sheet {
+    padding: 16px;
+  }
+
+  .sheet-list {
+    columns: 1;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .app > header,
+  .app > footer,
+  .no-print {
+    display: none !important;
+  }
+
+  .app {
+    max-width: none;
+    padding: 0;
+  }
+
+  .sheet {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  .sheet-title {
+    border-bottom-color: #444;
+  }
+
+  .sheet-subtitle,
+  .sheet-artist,
+  .sheet-extra,
+  .sheet-total {
+    color: #555;
+  }
+
+  /* Keep two columns on paper unless large text was chosen. */
+  .sheet:not(.sheet-large) .sheet-list {
+    columns: 2;
+  }
+}
