@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseBackup, serializeBackup } from './backup'
+import { backupFile, parseBackup, serializeBackup } from './backup'
 import { starterSongsMissingFrom, STARTER_COUNT } from '../data/starterLibrary'
 import { makeSong } from './testUtils'
 import { BUILT_IN_TEMPLATES } from './templates'
@@ -22,6 +22,14 @@ describe('backup', () => {
       setLists: [{ id: 's', name: 'Gig', songIds: ['a', 'ghost'] }],
     })
     expect(parseBackup(text).setLists[0].songIds).toEqual(['a'])
+  })
+
+  it('builds a dated JSON file that parses back', async () => {
+    const songs = [makeSong('a')]
+    const file = backupFile({ songs, setLists: [], templates: [] }, new Date('2026-06-01T12:00:00Z'))
+    expect(file.name).toBe('set-list-manager-backup-2026-06-01.json')
+    expect(file.type).toBe('application/json')
+    expect(parseBackup(await file.text()).songs).toEqual(songs)
   })
 
   it('rejects files that are not valid backups', () => {

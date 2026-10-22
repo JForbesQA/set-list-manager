@@ -11,7 +11,7 @@ A small personal app for building gig set lists from a song library. Data is sto
 - Set lists with name, date and venue; add, reorder, remove, duplicate; running total time
 - Templates (open mic opener, short set, full show, plus your own) and a generator that balances tempo, avoids
   repeating an artist back to back and favours songs you have not played recently
-- Backup: download and restore everything as one JSON file
+- Backup: share (iPhone share sheet, Save to Files, AirDrop) or download everything as one JSON file, and restore it
 - Installable on iPhone as an offline app (PWA)
 
 ## Install on iPhone

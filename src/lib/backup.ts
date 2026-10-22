@@ -39,3 +39,12 @@ export function parseBackup(text: string): BackupData {
 export function backupFileName(now: Date = new Date()): string {
   return `set-list-manager-backup-${now.toISOString().slice(0, 10)}.json`
 }
+
+export function backupFile(data: BackupData, now: Date = new Date()): File {
+  return new File([serializeBackup(data, now)], backupFileName(now), { type: 'application/json' })
+}
+
+/** True when the browser can hand a file to the system share sheet (Save to Files, AirDrop, Mail...). */
+export function canShareFile(file: File): boolean {
+  return typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] }) === true
+}

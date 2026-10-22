@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
-import { backupFileName, parseBackup, serializeBackup, type BackupData } from './lib/backup'
+import { backupFile, canShareFile, parseBackup, type BackupData } from './lib/backup'
 
 interface Props {
   data: BackupData
@@ -10,12 +10,27 @@ export function BackupView({ data, onRestore }: Props) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
+  const [shareable] = useState(() => canShareFile(backupFile({ songs: [], setLists: [], templates: [] })))
+
+  async function share() {
+    setError('')
+    try {
+      await navigator.share({ files: [backupFile(data)], title: 'Set List Manager backup' })
+      setMessage('Backup shared. If you chose Save to Files, it is in the folder you picked.')
+    } catch (err) {
+      // Closing the share sheet without choosing anything is not an error.
+      if (err instanceof DOMException && err.name === 'AbortError') return setMessage('')
+      setMessage('')
+      setError('Sharing did not work here. Use Download backup instead.')
+    }
+  }
+
   function download() {
-    const blob = new Blob([serializeBackup(data)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
+    const file = backupFile(data)
+    const url = URL.createObjectURL(file)
     const a = document.createElement('a')
     a.href = url
-    a.download = backupFileName()
+    a.download = file.name
     a.click()
     URL.revokeObjectURL(url)
     setError('')
@@ -45,11 +60,16 @@ export function BackupView({ data, onRestore }: Props) {
     <section aria-labelledby="backup-heading">
       <h2 id="backup-heading">Backup</h2>
       <p className="muted">
-        Your songs, set lists and templates live only in this browser. Download a backup file now and then, and use it to
-        move your data to another device or restore it. Installing the app on your iPhone starts with an empty library
+        Your songs, set lists and templates live only in this browser. Save a backup file now and then (on iPhone, tap Share
+        backup and choose Save to Files), and use it to move your data to another device or restore it. Installing the app on your iPhone starts with an empty library
         because the home-screen app has its own storage, so restore a backup there.
       </p>
       <div className="card actions">
+        {shareable && (
+          <button type="button" onClick={share}>
+            Share backup (Save to Files, AirDrop…)
+          </button>
+        )}
         <button type="button" onClick={download}>
           Download backup
         </button>
