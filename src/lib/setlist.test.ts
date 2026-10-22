@@ -66,6 +66,7 @@ describe('normalizeSong', () => {
       title: 'Old',
       artist: 'A',
       key: 'G',
+      capo: 0,
       tempo: null,
       durationSec: 180,
       notes: '',
@@ -76,6 +77,11 @@ describe('normalizeSong', () => {
     expect(normalizeSong({ title: '', durationSec: 100 })).toBeNull()
     expect(normalizeSong({ title: 'x', durationSec: 0 })).toBeNull()
     expect(normalizeSong('nope')).toBeNull()
+  })
+  it('keeps a valid capo and ignores an invalid one', () => {
+    expect(normalizeSong({ title: 'x', durationSec: 60, capo: 2 })?.capo).toBe(2)
+    expect(normalizeSong({ title: 'x', durationSec: 60, capo: 15 })?.capo).toBe(0)
+    expect(normalizeSong({ title: 'x', durationSec: 60, capo: 'two' })?.capo).toBe(0)
   })
   it('ignores an invalid tempo', () => {
     expect(normalizeSong({ title: 'x', durationSec: 60, tempo: 'fast' })?.tempo).toBeNull()

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { capoChanges, describeKey } from './lib/chords'
 import { generateSet } from './lib/generator'
 import {
   compareSongs,
@@ -190,6 +191,9 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
           {inSet.length > 1 && (
             <p className="meta">Tempo flow: {inSet.map((s) => s.tempo ?? '?').join(' → ')}</p>
           )}
+          {inSet.some((s) => s.capo > 0) && (
+            <p className="meta">Capo changes: {capoChanges(inSet)}</p>
+          )}
           {selectedTemplate && (
             <button type="button" onClick={() => regenerate(selected, selectedTemplate)}>
               Regenerate from {selectedTemplate.name}
@@ -206,7 +210,7 @@ export function SetListsView({ songs, setLists, templates, onChange }: Props) {
                     <strong>{s.title}</strong>
                     {s.artist && <span className="muted"> — {s.artist}</span>}
                     <div className="meta">
-                      {[s.key && `Key ${s.key}`, s.tempo && `${s.tempo} tempo`, formatDuration(s.durationSec)]
+                      {[describeKey(s), s.tempo && `${s.tempo} tempo`, formatDuration(s.durationSec)]
                         .filter(Boolean)
                         .join(' · ')}
                     </div>

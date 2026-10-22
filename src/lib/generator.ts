@@ -44,6 +44,9 @@ export function allocate(total: number, weights: Record<Tempo, number>): Record<
   return counts
 }
 
+/** A mild nudge, so tempo and variety still win, towards fewer capo moves on stage. */
+const CAPO_CHANGE_PENALTY = 0.4
+
 const TIE_ORDER: Tempo[] = ['medium', 'high', 'slow']
 
 /** Orders tempos for `n` slots: chosen opener/closer at the ends, no repeats back to back where possible. */
@@ -106,6 +109,7 @@ function build(
       let score = rng() + staleness(song.id, setLists, today)
       if (prev && song.artist && song.artist === prev.artist) score -= 1.5
       if (prev && song.key && song.key === prev.key) score -= 0.3
+      if (prev && song.capo !== prev.capo) score -= CAPO_CHANGE_PENALTY
       if (score > bestScore) {
         bestScore = score
         best = song
