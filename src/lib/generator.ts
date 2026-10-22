@@ -6,6 +6,8 @@ export interface GenerateOptions {
   seed?: number
   /** YYYY-MM-DD used to work out how recently each song was played. */
   today?: string
+  /** Seconds between songs, counted towards a time target (and included in `totalSec`). */
+  gapSec?: number
 }
 
 export interface GeneratedSet {
@@ -53,13 +55,14 @@ const ATTEMPTS = 40
 /**
  * How far a set may stray from a time target before it counts as a miss. Running a little over is
  * fine (an extra song beats stopping short), so the window is tight below the target and a bit looser
- * above it, but not so loose that it overshoots a time slot: 30 minutes accepts 29:15 to 32:06, and no
- * target ever accepts more than 3 minutes short or 4 minutes over.
+ * above it, but not so loose that it overshoots a time slot: 30 minutes accepts 29:15 to 31:30, and no
+ * target ever accepts more than 3 minutes short or over. Song lengths come from recordings, so they
+ * will not match real playing time exactly; anything tighter than this would be false precision.
  */
 export function timeWindow(targetSec: number): { under: number; over: number } {
   return {
     under: Math.round(Math.min(180, Math.max(45, targetSec * 0.025))),
-    over: Math.round(Math.min(240, Math.max(90, targetSec * 0.07))),
+    over: Math.round(Math.min(180, Math.max(60, targetSec * 0.05))),
   }
 }
 
@@ -146,6 +149,7 @@ function build(
   setLists: SetList[],
   seed: number,
   today: string,
+  gapSec: number,
 ): GeneratedSet {
   const rng = mulberry32(seed)
   const plan = planTempos(n, template, rng)
@@ -176,7 +180,8 @@ function build(
     used.add(best.id)
   }
 
-  return { songIds: chosen.map((s) => s.id), totalSec: chosen.reduce((sum, s) => sum + s.durationSec, 0) }
+  const music = chosen.reduce((sum, s) => sum + s.durationSec, 0)
+  return { songIds: chosen.map((s) => s.id), totalSec: music + Math.max(0, chosen.length - 1) * gapSec }
 }
 
 export function generateSet(
@@ -188,16 +193,17 @@ export function generateSet(
   if (songs.length === 0) return { songIds: [], totalSec: 0 }
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 32)
   const today = options.today ?? new Date().toISOString().slice(0, 10)
+  const gapSec = options.gapSec ?? 0
 
   if (template.limitType === 'songs') {
-    return build(Math.min(template.limitValue, songs.length), template, songs, setLists, seed, today)
+    return build(Math.min(template.limitValue, songs.length), template, songs, setLists, seed, today, gapSec)
   }
 
   // Time-based: try song counts around the estimate, and several different random draws, and keep
   // the first set that lands inside the time window (or the nearest one if none does).
   const target = template.limitValue * 60
   const window = timeWindow(target)
-  const avg = songs.reduce((s, x) => s + x.durationSec, 0) / songs.length
+  const avg = songs.reduce((s, x) => s + x.durationSec, 0) / songs.length + gapSec
   const estimate = Math.max(1, Math.round(target / avg))
   // A library that cannot reach the target just uses every song it has.
   const from = Math.min(Math.max(1, estimate - 2), songs.length)
@@ -207,7 +213,7 @@ export function generateSet(
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const attemptSeed = seed + attempt * 7919
     for (let n = from; n <= to; n++) {
-      const candidate = build(n, template, songs, setLists, attemptSeed, today)
+      const candidate = build(n, template, songs, setLists, attemptSeed, today, gapSec)
       const miss = missBy(candidate.totalSec, target, window)
       const closer =
         miss < bestMiss ||

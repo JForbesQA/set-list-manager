@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { backupFile, parseBackup, serializeBackup } from './backup'
 import { starterSongsMissingFrom, STARTER_COUNT } from '../data/starterLibrary'
 import { makeSong } from './testUtils'
+import { DEFAULT_SETTINGS } from './settings'
 import { BUILT_IN_TEMPLATES } from './templates'
 
 describe('backup', () => {
@@ -9,10 +10,16 @@ describe('backup', () => {
     const songs = [makeSong('a'), makeSong('b')]
     const setLists = [{ id: 's', name: 'Gig', date: '2026-06-01', venue: 'Bar', songIds: ['a', 'b'] }]
     const templates = [{ ...BUILT_IN_TEMPLATES[0], id: 'custom', builtIn: undefined, name: 'Mine' }]
-    const result = parseBackup(serializeBackup({ songs, setLists, templates }))
+    const result = parseBackup(serializeBackup({ songs, setLists, templates, settings: { gapSec: 25 } }))
     expect(result.songs).toEqual(songs)
     expect(result.setLists).toEqual(setLists)
     expect(result.templates.map((t) => t.name)).toEqual(['Mine'])
+    expect(result.settings).toEqual({ gapSec: 25 })
+  })
+
+  it('reads older backups that have no settings as the defaults', () => {
+    const text = JSON.stringify({ app: 'set-list-manager', songs: [], setLists: [], templates: [] })
+    expect(parseBackup(text).settings).toEqual(DEFAULT_SETTINGS)
   })
 
   it('drops set list entries that point at missing songs', () => {
@@ -26,7 +33,7 @@ describe('backup', () => {
 
   it('builds a dated JSON file that parses back', async () => {
     const songs = [makeSong('a')]
-    const file = backupFile({ songs, setLists: [], templates: [] }, new Date('2026-06-01T12:00:00Z'))
+    const file = backupFile({ songs, setLists: [], templates: [], settings: DEFAULT_SETTINGS }, new Date('2026-06-01T12:00:00Z'))
     expect(file.name).toBe('set-list-manager-backup-2026-06-01.json')
     expect(file.type).toBe('application/json')
     expect(parseBackup(await file.text()).songs).toEqual(songs)

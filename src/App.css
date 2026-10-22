@@ -389,3 +389,22 @@ h3 {
     columns: 2;
   }
 }
+
+.timing {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.timing summary {
+  cursor: pointer;
+}
+
+.timing label {
+  max-width: 220px;
+  margin-top: 8px;
+}
+
+.timing .meta {
+  margin: 8px 0 0;
+}

@@ -114,8 +114,9 @@ describe('generateSet', () => {
       }
       // An extra song beats stopping short, so some sets do run slightly over...
       expect(ranOver).toBeGreaterThan(20)
-      // ...but the buffer is small: 30 minutes accepts at most about 2 minutes over.
-      expect(over).toBeLessThanOrEqual(target * 0.075)
+      // ...but the buffer is small: 30 minutes accepts at most 90 seconds over.
+      expect(over).toBeLessThanOrEqual(Math.max(60, target * 0.05))
+      if (id === 'short-set-30') expect(over).toBe(90)
     }
   })
 
@@ -127,12 +128,59 @@ describe('generateSet', () => {
     expect(counts.size).toBeGreaterThanOrEqual(3)
   })
 
+  describe('time between songs', () => {
+    const real = starterSongsMissingFrom([])
+    const t = BUILT_IN_TEMPLATES.find((x) => x.id === 'short-set-30')!
+    const durationOf = (ids: string[]) => ids.reduce((sum, id) => sum + real.find((s) => s.id === id)!.durationSec, 0)
+
+    it('counts the gap between songs, but not after the last one, in the reported total', () => {
+      const r = generateSet(t, real, [], { seed: 4, today: '2026-10-22', gapSec: 30 })
+      expect(r.totalSec).toBe(durationOf(r.songIds) + 30 * (r.songIds.length - 1))
+    })
+
+    it('still lands in the time window with the gap included, using fewer songs of music', () => {
+      const { under, over } = timeWindow(30 * 60)
+      let fewer = 0
+      for (let seed = 0; seed < 100; seed++) {
+        const none = generateSet(t, real, [], { seed, today: '2026-10-22' })
+        const gap = generateSet(t, real, [], { seed, today: '2026-10-22', gapSec: 45 })
+        expect(gap.totalSec).toBeGreaterThanOrEqual(30 * 60 - under)
+        expect(gap.totalSec).toBeLessThanOrEqual(30 * 60 + over)
+        if (durationOf(gap.songIds) < durationOf(none.songIds)) fewer++
+      }
+      // Adding a pause means less music fits, in most runs.
+      expect(fewer).toBeGreaterThan(60)
+    })
+
+    it('leaves results unchanged when the gap is 0 or not given', () => {
+      expect(generateSet(t, real, [], { seed: 9, today: '2026-10-22', gapSec: 0 })).toEqual(
+        generateSet(t, real, [], { seed: 9, today: '2026-10-22' }),
+      )
+    })
+
+    it('does not change a song-count template', () => {
+      const openMic4 = BUILT_IN_TEMPLATES.find((x) => x.id === 'open-mic-opener')!
+      const a = generateSet(openMic4, real, [], { seed: 2, today: '2026-10-22' })
+      const b = generateSet(openMic4, real, [], { seed: 2, today: '2026-10-22', gapSec: 30 })
+      expect(b.songIds).toEqual(a.songIds)
+      expect(b.totalSec).toBe(a.totalSec + 30 * 3)
+    })
+  })
+
   it('has a tight window below the target and a looser one above it', () => {
-    expect(timeWindow(30 * 60)).toEqual({ under: 45, over: 126 })
-    expect(timeWindow(45 * 60)).toEqual({ under: 68, over: 189 })
+    // about 90 seconds over for a 30 minute set, never more than 3 minutes over for any target
+    expect(timeWindow(30 * 60)).toEqual({ under: 45, over: 90 })
+    expect(timeWindow(45 * 60)).toEqual({ under: 68, over: 135 })
+    expect(timeWindow(20 * 60).over).toBe(60)
     const big = timeWindow(300 * 60)
-    expect(big.over).toBe(240)
-    expect(big.under).toBeLessThan(big.over)
+    expect(big.over).toBe(180)
+    expect(big.under).toBeLessThanOrEqual(big.over)
+    for (const mins of [10, 30, 60, 120, 240]) {
+      const w = timeWindow(mins * 60)
+      expect(w.under).toBeLessThanOrEqual(180)
+      expect(w.over).toBeLessThanOrEqual(180)
+      expect(w.under).toBeLessThanOrEqual(w.over)
+    }
   })
 
   it('uses every song when the library cannot reach the time target', () => {

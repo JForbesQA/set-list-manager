@@ -1,10 +1,12 @@
 import { normalizeSetList, normalizeSong, type SetList, type Song } from './setlist'
+import { normalizeSettings, type Settings } from './settings'
 import { normalizeTemplate, type Template } from './templates'
 
 export interface BackupData {
   songs: Song[]
   setLists: SetList[]
   templates: Template[]
+  settings: Settings
 }
 
 const APP_ID = 'set-list-manager'
@@ -33,7 +35,7 @@ export function parseBackup(text: string): BackupData {
     return set ? [{ ...set, songIds: set.songIds.filter((id) => songIds.has(id)) }] : []
   })
   const templates = list(r.templates).flatMap((x) => normalizeTemplate(x) ?? [])
-  return { songs, setLists, templates }
+  return { songs, setLists, templates, settings: normalizeSettings(r.settings) }
 }
 
 export function backupFileName(now: Date = new Date()): string {
