@@ -1,77 +1,131 @@
 import { useState, type FormEvent } from 'react'
-import { formatDuration, newId, parseDuration, type Song } from './lib/setlist'
+import { STARTER_COUNT } from './data/starterLibrary'
+import {
+  compareSongs,
+  formatDuration,
+  isTempo,
+  lastPlayed,
+  newId,
+  parseDuration,
+  type SetList,
+  type Song,
+} from './lib/setlist'
 
 interface Props {
   songs: Song[]
-  onAdd: (song: Song) => void
+  setLists: SetList[]
+  onSave: (song: Song) => void
   onDelete: (id: string) => void
+  onLoadStarter: () => number
 }
 
-export function SongsView({ songs, onAdd, onDelete }: Props) {
-  const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
-  const [key, setKey] = useState('')
-  const [bpm, setBpm] = useState('')
-  const [duration, setDuration] = useState('')
+const EMPTY = { title: '', artist: '', key: '', tempo: '', duration: '', notes: '' }
+
+function formatDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+export function SongsView({ songs, setLists, onSave, onDelete, onLoadStarter }: Props) {
+  const [form, setForm] = useState(EMPTY)
+  const [editing, setEditing] = useState<Song | null>(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [reviewOnly, setReviewOnly] = useState(false)
+  const [notice, setNotice] = useState('')
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    const durationSec = parseDuration(duration)
-    if (!title.trim()) return setError('Title is required.')
-    if (durationSec === null) return setError('Duration must look like 3:45.')
-    const bpmNum = bpm.trim() === '' ? null : Number(bpm)
-    if (bpmNum !== null && (!Number.isInteger(bpmNum) || bpmNum < 20 || bpmNum > 300)) {
-      return setError('BPM must be a whole number between 20 and 300.')
-    }
-    onAdd({
-      id: newId(),
-      title: title.trim(),
-      artist: artist.trim(),
-      key: key.trim(),
-      bpm: bpmNum,
-      durationSec,
-    })
-    setTitle('')
-    setArtist('')
-    setKey('')
-    setBpm('')
-    setDuration('')
+  const field = (name: keyof typeof EMPTY) => ({
+    value: form[name],
+    onChange: (e: { target: { value: string } }) => setForm({ ...form, [name]: e.target.value }),
+  })
+
+  function reset() {
+    setForm(EMPTY)
+    setEditing(null)
     setError('')
   }
 
+  function startEdit(song: Song) {
+    setEditing(song)
+    setError('')
+    setForm({
+      title: song.title,
+      artist: song.artist,
+      key: song.key,
+      tempo: song.tempo ?? '',
+      duration: formatDuration(song.durationSec),
+      notes: song.notes,
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    const durationSec = parseDuration(form.duration)
+    if (!form.title.trim()) return setError('Title is required.')
+    if (durationSec === null) return setError('Duration must look like 3:45.')
+    onSave({
+      id: editing?.id ?? newId(),
+      title: form.title.trim(),
+      artist: form.artist.trim(),
+      key: form.key.trim(),
+      tempo: isTempo(form.tempo) ? form.tempo : null,
+      durationSec,
+      notes: form.notes.trim(),
+      needsReview: false,
+    })
+    reset()
+  }
+
+  const reviewCount = songs.filter((s) => s.needsReview).length
   const q = query.trim().toLowerCase()
-  const visible = songs.filter(
-    (s) => !q || s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q),
-  )
+  const visible = songs
+    .filter((s) => !reviewOnly || s.needsReview)
+    .filter((s) => !q || s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q))
+    .sort(compareSongs)
 
   return (
     <section aria-labelledby="songs-heading">
-      <h2 id="songs-heading">Song library</h2>
+      <h2 id="songs-heading">Song library ({songs.length})</h2>
 
-      <form onSubmit={submit} className="card form-grid" aria-label="Add song">
+      <form onSubmit={submit} className="card form-grid" aria-label={editing ? 'Edit song' : 'Add song'}>
         <label>
           Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input {...field('title')} />
         </label>
         <label>
           Artist
-          <input value={artist} onChange={(e) => setArtist(e.target.value)} />
+          <input {...field('artist')} />
         </label>
         <label>
           Key
-          <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="e.g. Am" />
+          <input {...field('key')} placeholder="e.g. Am" />
         </label>
         <label>
-          BPM
-          <input value={bpm} onChange={(e) => setBpm(e.target.value)} inputMode="numeric" />
+          Tempo
+          <select {...field('tempo')}>
+            <option value="">Not set</option>
+            <option value="slow">Slow</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
         </label>
         <label>
           Duration (m:ss)
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="3:45" />
+          <input {...field('duration')} placeholder="3:45" />
         </label>
-        <button type="submit">Add song</button>
+        <label className="wide">
+          Notes
+          <input {...field('notes')} placeholder="Capo, tuning, which version you play…" />
+        </label>
+        <div className="actions">
+          <button type="submit">{editing ? 'Save changes' : 'Add song'}</button>
+          {editing && (
+            <button type="button" onClick={reset}>
+              Cancel
+            </button>
+          )}
+        </div>
         {error && (
           <p role="alert" className="error">
             {error}
@@ -79,33 +133,81 @@ export function SongsView({ songs, onAdd, onDelete }: Props) {
         )}
       </form>
 
-      <label className="search">
-        Search songs
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
-      </label>
+      {songs.length < 10 && (
+        <div className="card">
+          <p>
+            Start with your repertoire: load {STARTER_COUNT} songs with drafted durations, keys and tempos. They are
+            flagged <strong>Needs review</strong> so you can confirm or correct each one.
+          </p>
+          <button
+            type="button"
+            onClick={() => setNotice(`Added ${onLoadStarter()} songs. Review them below.`)}
+          >
+            Load starter library
+          </button>
+        </div>
+      )}
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
 
-      {songs.length === 0 ? (
-        <p className="muted">No songs yet. Add your first song above.</p>
-      ) : visible.length === 0 ? (
-        <p className="muted">No songs match your search.</p>
+      {songs.length > 0 && (
+        <div className="toolbar">
+          <label className="search">
+            Search songs
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </label>
+          {reviewCount > 0 && (
+            <label className="check">
+              <input type="checkbox" checked={reviewOnly} onChange={(e) => setReviewOnly(e.target.checked)} />
+              Needs review ({reviewCount})
+            </label>
+          )}
+        </div>
+      )}
+
+      {songs.length > 0 && visible.length === 0 ? (
+        <p className="muted">No songs match.</p>
       ) : (
         <ul className="list" aria-label="Songs">
-          {visible.map((s) => (
-            <li key={s.id} className="row">
-              <div>
-                <strong>{s.title}</strong>
-                {s.artist && <span className="muted"> — {s.artist}</span>}
-                <div className="meta">
-                  {[s.key && `Key ${s.key}`, s.bpm && `${s.bpm} BPM`, formatDuration(s.durationSec)]
-                    .filter(Boolean)
-                    .join(' · ')}
+          {visible.map((s) => {
+            const played = lastPlayed(s.id, setLists)
+            return (
+              <li key={s.id} className="row">
+                <div>
+                  <strong>{s.title}</strong>
+                  {s.artist && <span className="muted"> — {s.artist}</span>}
+                  {s.needsReview && <span className="badge">Needs review</span>}
+                  <div className="meta">
+                    {[
+                      s.key && `Key ${s.key}`,
+                      s.tempo && `${s.tempo[0].toUpperCase()}${s.tempo.slice(1)} tempo`,
+                      formatDuration(s.durationSec),
+                      played ? `Last played ${formatDate(played)}` : 'Never played',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </div>
+                  {s.notes && <div className="meta">{s.notes}</div>}
                 </div>
-              </div>
-              <button type="button" className="danger" onClick={() => onDelete(s.id)}>
-                Delete <span className="sr-only">{s.title}</span>
-              </button>
-            </li>
-          ))}
+                <div className="actions">
+                  {s.needsReview && (
+                    <button type="button" onClick={() => onSave({ ...s, needsReview: false })}>
+                      Confirm <span className="sr-only">{s.title}</span>
+                    </button>
+                  )}
+                  <button type="button" onClick={() => startEdit(s)}>
+                    Edit <span className="sr-only">{s.title}</span>
+                  </button>
+                  <button type="button" className="danger" onClick={() => onDelete(s.id)}>
+                    Delete <span className="sr-only">{s.title}</span>
+                  </button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>
