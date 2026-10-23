@@ -17,8 +17,14 @@ A small personal app for building gig set lists from a song library. Data is sto
   30 minute set lands between about 29:15 and 31:30 and an extra song beats stopping short
 - Optional "time between songs" setting (off by default, collapsed on the Set Lists tab) that counts pauses for
   tuning and banter in totals and when filling a time slot, so the number of songs that fit is realistic
+- Modern layout: bottom tab bar on phones (top bar on wide screens), search-first song library with filters, add and
+  edit forms in slide-up sheets, tempo colours throughout, an energy strip showing the tempo flow of a set, and a
+  time bar showing a set against its time slot
+- Opening a set list shows the printed-style sheet first, with Sheet / Stage / Edit views; Edit has the details,
+  reordering, a search-as-you-type picker to add several songs at once (with a live time projection), regenerate,
+  duplicate and delete
 - Readable set list sheet modelled on a printed set list (two numbered columns, artist beneath each title) with
-  options for key and capo, tempo, times and notes, a large-text stage mode, and Save as PDF / Save as Word (.docx)
+  options for key and capo, tempo, times and notes, a large-text Stage view, and Save as PDF / Save as Word (.docx)
   files (through the share sheet on iPhone, where web apps cannot print), print on desktop, and share or copy as text
 - Backup: share (iPhone share sheet, Save to Files, AirDrop) or download everything as one JSON file, and restore it
 - Installable on iPhone as an offline app (PWA)

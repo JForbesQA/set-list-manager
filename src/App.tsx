@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 import './App.css'
+import { BackupIcon, SetsIcon, SongsIcon, TemplatesIcon } from './components/icons'
 import { BackupView } from './BackupView'
 import { SetListsView } from './SetListsView'
 import { SongsView } from './SongsView'
@@ -12,11 +13,11 @@ import { BUILT_IN_TEMPLATES, normalizeTemplate, type Template } from './lib/temp
 
 type Tab = 'songs' | 'sets' | 'templates' | 'backup'
 
-const TABS: [Tab, string][] = [
-  ['songs', 'Songs'],
-  ['sets', 'Set Lists'],
-  ['templates', 'Templates'],
-  ['backup', 'Backup'],
+const TABS: [Tab, string, ComponentType][] = [
+  ['songs', 'Songs', SongsIcon],
+  ['sets', 'Set Lists', SetsIcon],
+  ['templates', 'Templates', TemplatesIcon],
+  ['backup', 'Backup', BackupIcon],
 ]
 
 const migrateList =
@@ -48,15 +49,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <header>
+      <header className="app-header no-print">
         <h1>Set List Manager</h1>
-        <nav aria-label="Main">
-          {TABS.map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={tab === id} onClick={() => setTab(id)}>
-              {label}
-            </button>
-          ))}
-        </nav>
       </header>
       <main>
         {tab === 'songs' && (
@@ -93,9 +87,17 @@ export default function App() {
           />
         )}
       </main>
-      <footer className="version">
+      <footer className="version no-print">
         Set List Manager v{__APP_VERSION__} · built {__BUILD_DATE__} · {__COMMIT__}
       </footer>
+      <nav className="tabbar no-print" aria-label="Main">
+        {TABS.map(([id, label, Icon]) => (
+          <button key={id} type="button" aria-pressed={tab === id} onClick={() => setTab(id)}>
+            <Icon />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
