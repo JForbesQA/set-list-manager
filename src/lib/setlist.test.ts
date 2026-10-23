@@ -103,6 +103,11 @@ describe('lastPlayed', () => {
     expect(lastPlayed('a', sets)).toBe('2026-03-05')
     expect(lastPlayed('b', sets)).toBe('2026-03-05')
   })
+  it('can ignore gigs that have not happened yet', () => {
+    expect(lastPlayed('a', sets, '2026-02-01')).toBe('2026-01-10')
+    expect(lastPlayed('b', sets, '2026-02-01')).toBeNull()
+    expect(lastPlayed('a', sets, '2026-03-05')).toBe('2026-03-05') // a gig today counts as played
+  })
   it('returns null for never played or undated sets', () => {
     expect(lastPlayed('c', sets)).toBeNull()
     expect(lastPlayed('zzz', sets)).toBeNull()

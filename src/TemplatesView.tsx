@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { Modal } from './components/Modal'
+import { PlusIcon } from './components/icons'
 import { isTempo, newId, TEMPOS, type Tempo } from './lib/setlist'
 import { describeTemplate, VARIETY_LABELS, type Template, type Variety } from './lib/templates'
 
@@ -40,16 +42,17 @@ function toDraft(t: Template): Draft {
   }
 }
 
-export function TemplatesView({ builtIn, custom, onChange }: Props) {
-  const [draft, setDraft] = useState<Draft>(EMPTY)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [error, setError] = useState('')
+interface FormProps {
+  initial: Draft
+  /** Set when editing one of your own templates; null when creating a new one. */
+  editingId: string | null
+  onSave: (template: Template) => void
+  onClose: () => void
+}
 
-  function reset() {
-    setDraft(EMPTY)
-    setEditingId(null)
-    setError('')
-  }
+function TemplateForm({ initial, editingId, onSave, onClose }: FormProps) {
+  const [draft, setDraft] = useState<Draft>(initial)
+  const [error, setError] = useState('')
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -64,7 +67,7 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
     if (TEMPOS.some((t) => !Number.isFinite(mix[t]) || mix[t] < 0) || mix.slow + mix.medium + mix.high === 0) {
       return setError('Tempo mix needs at least one number above zero.')
     }
-    const next: Template = {
+    onSave({
       id: editingId ?? newId(),
       name: draft.name.trim(),
       limitType: draft.limitType,
@@ -73,42 +76,9 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
       opener: isTempo(draft.opener) ? draft.opener : null,
       closer: isTempo(draft.closer) ? draft.closer : null,
       variety: draft.variety,
-    }
-    onChange(editingId ? custom.map((t) => (t.id === editingId ? next : t)) : [...custom, next])
-    reset()
+    })
+    onClose()
   }
-
-  function startEdit(t: Template, copy: boolean) {
-    setDraft({ ...toDraft(t), name: copy ? `${t.name} (copy)` : t.name })
-    setEditingId(copy ? null : t.id)
-    setError('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const row = (t: Template, isBuiltIn: boolean) => (
-    <li key={t.id} className="row">
-      <div>
-        <strong>{t.name}</strong>
-        <div className="meta">{describeTemplate(t)}</div>
-      </div>
-      <div className="actions">
-        {isBuiltIn ? (
-          <button type="button" onClick={() => startEdit(t, true)}>
-            Customize <span className="sr-only">{t.name}</span>
-          </button>
-        ) : (
-          <>
-            <button type="button" onClick={() => startEdit(t, false)}>
-              Edit <span className="sr-only">{t.name}</span>
-            </button>
-            <button type="button" className="danger" onClick={() => onChange(custom.filter((x) => x.id !== t.id))}>
-              Delete <span className="sr-only">{t.name}</span>
-            </button>
-          </>
-        )}
-      </div>
-    </li>
-  )
 
   const tempoSelect = (label: string, value: string, key: 'opener' | 'closer') => (
     <label>
@@ -125,18 +95,11 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
   )
 
   return (
-    <section aria-labelledby="templates-heading">
-      <h2 id="templates-heading">Templates</h2>
-      <p className="muted">
-        A template describes a kind of set: how long it is and its balance of slow, medium and high tempo songs. The
-        mix is a ratio (for example 1 : 3 : 4), and the tempo plan sets how closely a set has to follow it. Generate a
-        set list from a template on the Set Lists tab.
-      </p>
-
-      <form onSubmit={submit} className="card form-grid" aria-label={editingId ? 'Edit template' : 'New template'}>
-        <label>
+    <form onSubmit={submit} className="stack" aria-label={editingId ? 'Edit template' : 'New template'}>
+      <div className="form-grid">
+        <label className="wide">
           Template name
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          <input data-autofocus value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
         </label>
         <label>
           Length by
@@ -179,33 +142,106 @@ export function TemplatesView({ builtIn, custom, onChange }: Props) {
         ))}
         {tempoSelect('First song tempo', draft.opener, 'opener')}
         {tempoSelect('Last song tempo', draft.closer, 'closer')}
-        <div className="actions">
-          <button type="submit">{editingId ? 'Save template' : 'Add template'}</button>
-          {(editingId || draft.name) && (
-            <button type="button" onClick={reset}>
-              Cancel
-            </button>
-          )}
-        </div>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-      </form>
+      </div>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <div className="modal-actions">
+        <button type="submit" className="primary">
+          {editingId ? 'Save template' : 'Add template'}
+        </button>
+        <button type="button" className="ghost" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
-      <h3>Built-in</h3>
+export function TemplatesView({ builtIn, custom, onChange }: Props) {
+  const [modal, setModal] = useState<{ initial: Draft; editingId: string | null } | null>(null)
+
+  function save(next: Template) {
+    onChange(custom.some((t) => t.id === next.id) ? custom.map((t) => (t.id === next.id ? next : t)) : [...custom, next])
+  }
+
+  const row = (t: Template, isBuiltIn: boolean) => (
+    <li key={t.id} className="row">
+      <div className="row-main">
+        <div className="row-title">
+          <strong>{t.name}</strong>
+        </div>
+        <div className="row-meta">{describeTemplate(t)}</div>
+      </div>
+      <div className="row-actions">
+        {isBuiltIn ? (
+          <button
+            type="button"
+            className="small"
+            onClick={() => setModal({ initial: { ...toDraft(t), name: `${t.name} (copy)` }, editingId: null })}
+          >
+            Customize <span className="sr-only">{t.name}</span>
+          </button>
+        ) : (
+          <>
+            <button type="button" className="small" onClick={() => setModal({ initial: toDraft(t), editingId: t.id })}>
+              Edit <span className="sr-only">{t.name}</span>
+            </button>
+            <button
+              type="button"
+              className="small danger"
+              onClick={() => {
+                if (window.confirm(`Delete the template ${t.name}?`)) onChange(custom.filter((x) => x.id !== t.id))
+              }}
+            >
+              Delete <span className="sr-only">{t.name}</span>
+            </button>
+          </>
+        )}
+      </div>
+    </li>
+  )
+
+  return (
+    <section aria-labelledby="templates-heading">
+      <div className="page-head">
+        <h2 id="templates-heading">Templates</h2>
+        <button type="button" className="primary with-icon" onClick={() => setModal({ initial: EMPTY, editingId: null })}>
+          <PlusIcon />
+          New template
+        </button>
+      </div>
+      <p className="muted">
+        A template describes a kind of set: how long it is and its balance of slow, medium and high tempo songs. The mix
+        is a ratio (for example 1 : 3 : 4), and the tempo plan sets how closely a set has to follow it. Generate a set
+        list from a template on the Set Lists tab.
+      </p>
+
+      <h3 className="section-title">Built-in</h3>
       <ul className="list" aria-label="Built-in templates">
         {builtIn.map((t) => row(t, true))}
       </ul>
 
-      <h3>Your templates</h3>
+      <h3 className="section-title">Your templates</h3>
       {custom.length === 0 ? (
-        <p className="muted">None yet. Create one above, or customize a built-in one.</p>
+        <p className="muted">None yet. Create one, or customize a built-in one.</p>
       ) : (
         <ul className="list" aria-label="Your templates">
           {custom.map((t) => row(t, false))}
         </ul>
+      )}
+
+      {modal && (
+        <Modal title={modal.editingId ? 'Edit template' : 'New template'} onClose={() => setModal(null)}>
+          <TemplateForm
+            initial={modal.initial}
+            editingId={modal.editingId}
+            onSave={save}
+            onClose={() => setModal(null)}
+          />
+        </Modal>
       )}
     </section>
   )

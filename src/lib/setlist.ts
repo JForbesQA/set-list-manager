@@ -112,10 +112,14 @@ export function normalizeSetList(raw: unknown): SetList | null {
   }
 }
 
-/** Most recent date (YYYY-MM-DD) a song appeared in a dated set list, or null if never. */
-export function lastPlayed(songId: string, setLists: SetList[]): string | null {
+/**
+ * Most recent date (YYYY-MM-DD) a song appeared in a dated set list, or null if never.
+ * Pass `today` to ignore gigs that have not happened yet.
+ */
+export function lastPlayed(songId: string, setLists: SetList[], today?: string): string | null {
   let latest: string | null = null
   for (const set of setLists) {
+    if (today && set.date > today) continue
     if (set.date && set.songIds.includes(songId) && (latest === null || set.date > latest)) {
       latest = set.date
     }
